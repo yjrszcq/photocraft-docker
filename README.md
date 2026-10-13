@@ -8,7 +8,7 @@
 docker run -d \
   --name photocraft \
   --restart unless-stopped \
-  -p 127.0.0.1:8080:8080 \
+  -p 8080:8080 \
   szcq/photocraft:latest
 ```
 
@@ -23,7 +23,7 @@ services:
     container_name: photocraft
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8080:8080"
+      - "8080:8080"
 ```
 
 启动：
