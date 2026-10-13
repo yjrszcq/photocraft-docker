@@ -56,5 +56,3 @@ docker rm photocraft
 ```
 
 然后重新执行上面的 `docker run` 命令。
-
-`latest` 指向最后一次成功发布的版本。需要固定版本时，将镜像标签改为具体版本号，例如 `szcq/photocraft:0.8.2`。
