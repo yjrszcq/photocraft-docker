@@ -1,0 +1,17 @@
+name: Auto Update PhotoCraft
+
+"on":
+  workflow_dispatch:
+  schedule:
+    # 19:00 UTC = 03:00 the next day in Asia/Kuala_Lumpur.
+    - cron: "0 19 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/docker.yaml
+    with:
+      version: latest
+    secrets: inherit

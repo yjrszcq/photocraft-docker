@@ -1,0 +1,75 @@
+name: Build and Push Docker Image
+
+"on":
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "PhotoCraft release: latest or a specific version"
+        required: true
+        default: latest
+        type: string
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+
+env:
+  IMAGE_OWNER: szcq
+  IMAGE_NAME: photocraft
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dockerhub-photocraft-publish
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+      - name: Resolve release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          version="${VERSION#v}"
+          if [ "$version" = latest ]; then
+            version=$(gh api repos/storytold/photocraft/releases/latest --jq '.tag_name | ltrimstr("v")')
+          fi
+          printf '%s\n' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z][0-9A-Za-z.-]*)?$'
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          gh api "repos/storytold/photocraft/releases/tags/v$version" --jq \
+            ".assets[] | select(.name == \"photocraft-web-$version.zip\") | \"checksum=\" + ((.digest // \"\") | ltrimstr(\"sha256:\"))" >> "$GITHUB_OUTPUT"
+          gh api "repos/storytold/photocraft/commits/v$version" --jq '"commit=" + .sha' >> "$GITHUB_OUTPUT"
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ env.IMAGE_OWNER }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+      - name: Build and push image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          pull: true
+          build-args: |
+            PHOTOCRAFT_VERSION=${{ steps.release.outputs.version }}
+            PHOTOCRAFT_SHA256=${{ steps.release.outputs.checksum }}
+            PHOTOCRAFT_COMMIT=${{ steps.release.outputs.commit }}
+          tags: |
+            ${{ env.IMAGE_OWNER }}/${{ env.IMAGE_NAME }}:${{ steps.release.outputs.version }}
+            ${{ env.IMAGE_OWNER }}/${{ env.IMAGE_NAME }}:${{ steps.release.outputs.version }}-build-${{ github.sha }}
+            ${{ env.IMAGE_OWNER }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha,scope=photocraft-web
+          cache-to: type=gha,mode=max,scope=photocraft-web
