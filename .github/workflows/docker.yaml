@@ -69,7 +69,6 @@ jobs:
             PHOTOCRAFT_COMMIT=${{ steps.release.outputs.commit }}
           tags: |
             ${{ env.IMAGE_OWNER }}/${{ env.IMAGE_NAME }}:${{ steps.release.outputs.version }}
-            ${{ env.IMAGE_OWNER }}/${{ env.IMAGE_NAME }}:${{ steps.release.outputs.version }}-build-${{ github.sha }}
             ${{ env.IMAGE_OWNER }}/${{ env.IMAGE_NAME }}:latest
           cache-from: type=gha,scope=photocraft-web
           cache-to: type=gha,mode=max,scope=photocraft-web
